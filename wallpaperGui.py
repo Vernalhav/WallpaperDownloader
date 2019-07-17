@@ -101,14 +101,27 @@ class WallpaperGUI(QDialog):
         event.accept()
 
     def download(self):
+        if (self.lastImageName == None):
+            self.showMessage("No image selected")
+            return
+
         if (self.downloadPath == ""):
             self.selectNewDirectory()
+
+        # User cancelled directory select, so don't download the image
+        if (self.downloadPath == ""):
+            print("Download cancelled")
+            return
 
         if (os.path.isfile( os.path.join("temp", self.lastImageName ))):
             os.rename( os.path.join("temp", self.lastImageName), os.path.join(self.downloadPath, self.lastImageName) )
 
+    def showMessage(self, msg):
+        QMessageBox.information(self, "Wallpaper Downloader", msg)
+
     def selectNewDirectory(self):
         dirPath = str(QFileDialog.getExistingDirectory(self, "Select Directory"))
+
         self.downloadPath = dirPath
 
     def setUpDropdowns(self):
@@ -127,10 +140,10 @@ class WallpaperGUI(QDialog):
         self.updateSecondDropdown()
 
     def updateSecondDropdown(self):
-        # labels map declared in the constructor method
         self.subStyleDropdown.clear()
         currentCategory = self.mainStyleDropdown.currentText()
 
+        # labels map declared in the constructor method
         for label in self.labels[currentCategory]:
             self.subStyleDropdown.addItem(label)
 
@@ -149,7 +162,7 @@ class WallpaperGUI(QDialog):
         url = self.siteDomain + "/" + mainCategory + ["/" + subCategory, ""][mainCategory == subCategory]
         response = get(url)
         if (response.status_code != 200):
-            print("Error loading page")
+            self.showMessage("Error loading page")
             return
 
         maxPages = self.getMaxPages(response)
@@ -158,7 +171,7 @@ class WallpaperGUI(QDialog):
 
         response = get(imagePageUrl)
         if (response.status_code != 200):
-            print("Error loading page")
+            self.showMessage("Error loading page")
             return
 
         imageUrl = self.getRandomImageURL(response)
@@ -185,7 +198,8 @@ class WallpaperGUI(QDialog):
         imageNumber = random.randint(0, len(imageDivs) - 1)
         smallImageLink = imageDivs[imageNumber].a.img.attrs["src"]
 
-        return re.sub(r"-\d*x\d*\.", ".", smallImageLink)   # removes the dimensions of the small icon, linking to the original image
+        # removes the dimensions of the small icon, linking to the original image
+        return re.sub(r"-\d*x\d*\.", ".", smallImageLink)
 
     def getMaxPages(self, response):
         ''' Returns the number of pages with results from the specified categories '''
