@@ -22,6 +22,7 @@ class WallpaperGUI(QDialog):
 
     def __init__(self):
         super().__init__()
+        self.TempFolderName = "temp"
         self.title = "Wallpaper Downloader"
         self.left = 0
         self.top = 0
@@ -44,8 +45,11 @@ class WallpaperGUI(QDialog):
             "Other"  : ["Other"]
         }
 
-        if not os.path.exists("temp"):
-            os.mkdir("temp")
+        if not os.path.exists(self.TempFolderName):
+            os.mkdir(self.TempFolderName)
+        else:
+            self.clearTempFolder()
+
         self.initUI()
 
     def initUI(self):
@@ -98,6 +102,8 @@ class WallpaperGUI(QDialog):
 
     def closeEvent(self, event):
         self.deletePreviousImage()
+        self.clearTempFolder()
+        os.rmdir(self.TempFolderName)
         event.accept()
 
     def download(self):
@@ -113,8 +119,8 @@ class WallpaperGUI(QDialog):
             print("Download cancelled")
             return
 
-        if (os.path.isfile( os.path.join("temp", self.lastImageName ))):
-            os.rename( os.path.join("temp", self.lastImageName), os.path.join(self.downloadPath, self.lastImageName) )
+        if (os.path.isfile( os.path.join(self.TempFolderName, self.lastImageName ))):
+            os.rename( os.path.join(self.TempFolderName, self.lastImageName), os.path.join(self.downloadPath, self.lastImageName) )
 
     def showMessage(self, msg):
         QMessageBox.information(self, "Wallpaper Downloader", msg)
@@ -148,7 +154,7 @@ class WallpaperGUI(QDialog):
             self.subStyleDropdown.addItem(label)
 
     def updateGraphicsView(self):
-        self.pixmap = QPixmap( os.path.join("temp", self.lastImageName) )
+        self.pixmap = QPixmap( os.path.join(self.TempFolderName, self.lastImageName) )
         self.mainScene.addPixmap(self.pixmap)
         self.mainImageView.show()
         self.mainImageView.fitInView(self.mainScene.sceneRect(), Qt.KeepAspectRatio)
@@ -177,7 +183,7 @@ class WallpaperGUI(QDialog):
         imageUrl = self.getRandomImageURL(response)
         imageName = re.sub(r".*/", "", imageUrl)   # removes the rest of the url
 
-        with open(os.path.join("temp", imageName), "wb") as f:
+        with open(os.path.join(self.TempFolderName, imageName), "wb") as f:
             f.write(get(imageUrl).content)
             self.lastImageName = imageName
             self.updateGraphicsView()
@@ -186,8 +192,8 @@ class WallpaperGUI(QDialog):
         if (self.lastImageName == None):
             return
 
-        if (os.path.isfile( os.path.join("temp", self.lastImageName ))):
-            os.remove(os.path.join("temp", self.lastImageName))
+        if (os.path.isfile( os.path.join(self.TempFolderName, self.lastImageName ))):
+            os.remove(os.path.join(self.TempFolderName, self.lastImageName))
 
     def getRandomImageURL(self, response):
         ''' Returns the URL of a random image in the page '''
@@ -207,7 +213,7 @@ class WallpaperGUI(QDialog):
         container = soup.find_all("div", class_ = "wp-pagenavi")[0]    # since there is only one page nav, we get the first (and only) result
 
         maxPages = int(container.find_all("a")[-2].text)
-        return int(maxPages)
+        return maxPages
 
     def randomizeSearch(self):
         self.mainStyleDropdown.setCurrentIndex( random.randint(0, len(self.labels) - 1) )
@@ -223,6 +229,17 @@ class WallpaperGUI(QDialog):
         centerPoint = QApplication.desktop().screenGeometry(screen).center()
         frameGm.moveCenter(centerPoint)
         self.move(frameGm.topLeft())
+
+    def clearTempFolder(self):
+        for fileName in os.listdir(os.path.join(self.TempFolderName)):
+            fileName = os.path.join(self.TempFolderName, fileName)
+            if (os.path.isfile(fileName)):
+                os.remove(fileName)
+            elif (os.path.isdir(fileName)):
+                os.rmdir(fileName)
+            else:
+                print("Please delete contents of temp folder")
+
 
 def main():
     app = QApplication(sys.argv)
