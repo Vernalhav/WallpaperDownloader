@@ -26,7 +26,8 @@ class WallpaperGUI(QDialog):
         self.width = 900
         self.height = 600
 
-        self.scraper = Scraper()
+        self.progressWindow = ProgressBarWindow()
+        self.scraper = Scraper(self)
 
         # Labels for the image categories of bingwallpaperhd.com
         self.labels = {
@@ -131,9 +132,18 @@ class WallpaperGUI(QDialog):
         mainCategory = self.mainStyleDropdown.currentText().lower()
         subCategory = self.subStyleDropdown.currentText().lower()
 
-        self.scraper.search(mainCategory, subCategory)
+        self.scraper.setUpSearch(mainCategory, subCategory)
+
+        self.scraper.start()
+        self.progressWindow.displayWindow()
+
+        self.scraper.wait()
 
         self.updateGraphicsView()
+
+    @pyqtSlot(int)
+    def update(self, n):
+        self.progressWindow.update(n)
 
     def randomizeSearch(self):
         self.mainStyleDropdown.setCurrentIndex( random.randint(0, len(self.labels) - 1) )
@@ -168,6 +178,7 @@ class ProgressBarWindow(QDialog):
 
     def __init__(self):
         QDialog.__init__(self)
+        QThread.__init__(self)
 
         self.title = "Searching..."
         self.left = 0
@@ -182,13 +193,19 @@ class ProgressBarWindow(QDialog):
         self.setGeometry(0, 0, self.width, self.height)
 
         self.progressBar = QProgressBar()
-        self.progressBar.setValue(100)
+        self.progressBar.setValue(0)
 
         self.mainLayout = QHBoxLayout()
         self.mainLayout.addWidget(self.progressBar)
         self.setLayout(self.mainLayout)
 
         self.center()
+
+    def displayWindow(self):
+        self.show()
+
+    def update(self, newProgress):
+        self.progressBar.setValue(newProgress)
 
     def center(self):
         frameGm = self.frameGeometry()

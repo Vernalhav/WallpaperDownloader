@@ -6,16 +6,26 @@ import os
 from requests import get
 from bs4 import BeautifulSoup
 
+from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtCore import QThread
+
 # Perhaps not all of these funcions should be in this class,
 # such as the directory-altering ones. Might refactor later
-class Scraper():
+class Scraper(QThread):
 
-    def __init__(self):
+    updateSignal = pyqtSignal(int, name="updateProgBar")
+
+    def __init__(self, gui):
+        super().__init__()
+
         self.downloadPath = ""
         self.lastImageName = None
         self.TempFolderName = "temp"
 
         self.siteDomain = "http://www.bingwallpaperhd.com"
+
+        self.gui = gui
+        self.updateSignal.connect(self.gui.update)
 
         # Labels for the image categories of bingwallpaperhd.com
         self.labels = {
@@ -27,6 +37,9 @@ class Scraper():
             "Space"  : ["Space"],
             "Other"  : ["Other"]
         }
+
+        self.mainCategory = ""
+        self.subCategory = ""
 
         if not os.path.exists(self.TempFolderName):
             os.mkdir(self.TempFolderName)
@@ -56,12 +69,20 @@ class Scraper():
     def getImagePath(self):
         return os.path.join(self.TempFolderName, self.lastImageName)
 
-    def search(self, mainCategory, subCategory):
-        url = self.siteDomain + "/" + mainCategory + ["/" + subCategory, ""][mainCategory == subCategory]
+    def setUpSearch(self, mainCategory, subCategory):
+        self.mainCategory = mainCategory
+        self.subCategory = subCategory
+
+    def search(self):
+        self.updateSignal.emit(0)
+
+        url = self.siteDomain + "/" + self.mainCategory + ["/" + self.subCategory, ""][self.mainCategory == self.subCategory]
         response = get(url)
         if (response.status_code != 200):
             self.showMessage("Error loading page")
             return
+
+        self.updateSignal.emit(33)
 
         maxPages = self.getMaxPages(response)
         randomPage = random.randint(1, maxPages)
@@ -72,12 +93,21 @@ class Scraper():
             self.showMessage("Error loading page")
             return
 
+        self.updateSignal.emit(66)
+
         imageUrl = self.getRandomImageURL(response)
         imageName = re.sub(r".*/", "", imageUrl)   # removes the rest of the url
 
         with open(os.path.join(self.TempFolderName, imageName), "wb") as f:
             f.write(get(imageUrl).content)
             self.lastImageName = imageName
+
+        self.updateSignal.emit(100)
+        print("Done")
+
+    def run(self):
+        self.search()
+        return
 
     def deletePreviousImage(self):
         if (self.lastImageName == None):

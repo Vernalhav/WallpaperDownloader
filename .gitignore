@@ -3,3 +3,4 @@ temp/
 *.bat
 *.JPG
 test.py
+__pycache__/
