@@ -14,6 +14,7 @@ from PyQt5.QtCore import QThread
 class Scraper(QThread):
 
     updateSignal = pyqtSignal(int, name="updateProgBar")
+    doneSignal = pyqtSignal(name="finished")
 
     def __init__(self, gui):
         super().__init__()
@@ -26,6 +27,7 @@ class Scraper(QThread):
 
         self.gui = gui
         self.updateSignal.connect(self.gui.update)
+        self.doneSignal.connect(self.gui.updateGraphicsView)
 
         # Labels for the image categories of bingwallpaperhd.com
         self.labels = {
@@ -103,7 +105,7 @@ class Scraper(QThread):
             self.lastImageName = imageName
 
         self.updateSignal.emit(100)
-        print("Done")
+        self.doneSignal.emit()
 
     def run(self):
         self.search()

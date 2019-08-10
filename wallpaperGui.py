@@ -1,6 +1,7 @@
 import sys
 import os
 import random
+import time
 
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
@@ -26,7 +27,6 @@ class WallpaperGUI(QDialog):
         self.width = 900
         self.height = 600
 
-        self.progressWindow = ProgressBarWindow()
         self.scraper = Scraper(self)
 
         # Labels for the image categories of bingwallpaperhd.com
@@ -63,6 +63,9 @@ class WallpaperGUI(QDialog):
         self.downloadBtn = QPushButton("Download")
         self.searchBtn = QPushButton("Search")
 
+        self.progress = QProgressBar()
+        self.progress.setValue(0)
+
         self.searchBtn.setToolTip("Search images using these categories")
         self.downloadBtn.setToolTip("Download the current picture to the selected directory")
         self.randomBtn.setToolTip("Search a picture using random categories\n(please don't spam this, be nice to the server)")
@@ -77,6 +80,7 @@ class WallpaperGUI(QDialog):
 
         self.bottomHorizontalLayout.addWidget(self.randomBtn, 0, 0)
         self.bottomHorizontalLayout.addWidget(self.downloadBtn, 0, 1)
+        self.bottomHorizontalLayout.addWidget(self.progress, 0, 2)
 
         self.topHorizontalLayout.addWidget(self.mainStyleDropdown, 0, 0)
         self.topHorizontalLayout.addWidget(self.subStyleDropdown, 0, 1)
@@ -120,6 +124,7 @@ class WallpaperGUI(QDialog):
         for label in self.labels[currentCategory]:
             self.subStyleDropdown.addItem(label)
 
+    @pyqtSlot()
     def updateGraphicsView(self):
         self.pixmap = QPixmap( self.scraper.getImagePath() )
         self.mainScene.addPixmap(self.pixmap)
@@ -135,15 +140,17 @@ class WallpaperGUI(QDialog):
         self.scraper.setUpSearch(mainCategory, subCategory)
 
         self.scraper.start()
-        self.progressWindow.displayWindow()
 
-        self.scraper.wait()
-
-        self.updateGraphicsView()
+    def fakeProgressIncrease(self):
+        while (self.progress.value() < 100):
+            self.progress.setValue( self.progress.value() + 1 )
+            time.sleep(0.5)
+        return
 
     @pyqtSlot(int)
     def update(self, n):
-        self.progressWindow.update(n)
+        # self.progressWindow.update(n)
+        self.progress.setValue(n)
 
     def randomizeSearch(self):
         self.mainStyleDropdown.setCurrentIndex( random.randint(0, len(self.labels) - 1) )
