@@ -139,7 +139,7 @@ class WallpaperGUI(QDialog):
         self.scraper.setUpSearch(mainCategory, subCategory)
 
         self.scraper.start()
-        self.progressWindow.displayWindow()
+        self.progressWindow.showProgressBar()
 
     def fakeProgressIncrease(self):
         while (self.progress.value() < 100):
@@ -183,13 +183,14 @@ class ProgressBarWindow(QDialog):
 
     def __init__(self):
         QDialog.__init__(self)
-        QThread.__init__(self)
 
         self.title = "Searching..."
         self.left = 0
         self.top = 0
         self.width = 300
         self.height = 100
+
+        self.updater = FakeUpdater(self)
 
         self.initUI()
 
@@ -206,9 +207,12 @@ class ProgressBarWindow(QDialog):
 
         self.center()
 
-    def displayWindow(self):
+    def showProgressBar(self):
         self.show()
+        self.updater.start()
+        return
 
+    @pyqtSlot(int)
     def update(self, newProgress):
         self.progressBar.setValue(newProgress)
 
@@ -218,6 +222,30 @@ class ProgressBarWindow(QDialog):
         centerPoint = QApplication.desktop().screenGeometry(screen).center()
         frameGm.moveCenter(centerPoint)
         self.move(frameGm.topLeft())
+
+class FakeUpdater(QThread):
+    updateSignal = pyqtSignal(int, name="fakeUpdater")
+
+    def __init__(self, gui):
+        QThread.__init__(self)
+        self.gui = gui
+        self.updateSignal.connect(self.gui.update)
+
+    def run(self):
+        self.updateSignal.emit(0)
+        time.sleep(0.1)
+
+        while (self.gui.progressBar.value() < 100):
+            self.updateSignal.emit( self.getNextValue() )
+            time.sleep(0.5)
+        return
+
+    def getNextValue(self):
+        current = self.gui.progressBar.value()
+        # return current + 1
+        nextThird = (current//33 + 1)*33
+
+        return (nextThird + current)//2
 
 
 def main():
