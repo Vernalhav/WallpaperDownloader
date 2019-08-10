@@ -28,6 +28,7 @@ class WallpaperGUI(QDialog):
         self.height = 600
 
         self.scraper = Scraper(self)
+        self.progressWindow = ProgressBarWindow()
 
         # Labels for the image categories of bingwallpaperhd.com
         self.labels = {
@@ -63,9 +64,6 @@ class WallpaperGUI(QDialog):
         self.downloadBtn = QPushButton("Download")
         self.searchBtn = QPushButton("Search")
 
-        self.progress = QProgressBar()
-        self.progress.setValue(0)
-
         self.searchBtn.setToolTip("Search images using these categories")
         self.downloadBtn.setToolTip("Download the current picture to the selected directory")
         self.randomBtn.setToolTip("Search a picture using random categories\n(please don't spam this, be nice to the server)")
@@ -80,7 +78,6 @@ class WallpaperGUI(QDialog):
 
         self.bottomHorizontalLayout.addWidget(self.randomBtn, 0, 0)
         self.bottomHorizontalLayout.addWidget(self.downloadBtn, 0, 1)
-        self.bottomHorizontalLayout.addWidget(self.progress, 0, 2)
 
         self.topHorizontalLayout.addWidget(self.mainStyleDropdown, 0, 0)
         self.topHorizontalLayout.addWidget(self.subStyleDropdown, 0, 1)
@@ -131,6 +128,8 @@ class WallpaperGUI(QDialog):
         self.mainImageView.show()
         self.mainImageView.fitInView(self.mainScene.sceneRect(), Qt.KeepAspectRatio)
 
+        self.progressWindow.close()
+
     def search(self):
         self.scraper.deletePreviousImage()
 
@@ -140,6 +139,7 @@ class WallpaperGUI(QDialog):
         self.scraper.setUpSearch(mainCategory, subCategory)
 
         self.scraper.start()
+        self.progressWindow.displayWindow()
 
     def fakeProgressIncrease(self):
         while (self.progress.value() < 100):
@@ -149,8 +149,7 @@ class WallpaperGUI(QDialog):
 
     @pyqtSlot(int)
     def update(self, n):
-        # self.progressWindow.update(n)
-        self.progress.setValue(n)
+        self.progressWindow.update(n)
 
     def randomizeSearch(self):
         self.mainStyleDropdown.setCurrentIndex( random.randint(0, len(self.labels) - 1) )
@@ -180,7 +179,6 @@ class WallpaperGUI(QDialog):
         frameGm.moveCenter(centerPoint)
         self.move(frameGm.topLeft())
 
-# Still not being used. Plan to do so in the near future
 class ProgressBarWindow(QDialog):
 
     def __init__(self):
