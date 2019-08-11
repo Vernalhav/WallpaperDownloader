@@ -188,7 +188,7 @@ class ProgressBarWindow(QDialog):
         self.left = 0
         self.top = 0
         self.width = 300
-        self.height = 100
+        self.height = 80
 
         self.updater = FakeUpdater(self)
 
@@ -200,9 +200,11 @@ class ProgressBarWindow(QDialog):
 
         self.progressBar = QProgressBar()
         self.progressBar.setValue(0)
+        self.textLabel = QLabel("Fetching number of pages...")
 
-        self.mainLayout = QHBoxLayout()
+        self.mainLayout = QVBoxLayout()
         self.mainLayout.addWidget(self.progressBar)
+        self.mainLayout.addWidget(self.textLabel)
         self.setLayout(self.mainLayout)
 
         self.center()
@@ -216,6 +218,10 @@ class ProgressBarWindow(QDialog):
     def update(self, newProgress):
         self.progressBar.setValue(newProgress)
 
+    @pyqtSlot(str)
+    def setDisplayText(self, text):
+        self.textLabel.setText(text)
+
     def center(self):
         frameGm = self.frameGeometry()
         screen = QApplication.desktop().screenNumber(QApplication.desktop().cursor().pos())
@@ -225,27 +231,43 @@ class ProgressBarWindow(QDialog):
 
 class FakeUpdater(QThread):
     updateSignal = pyqtSignal(int, name="fakeUpdater")
+    textSignal = pyqtSignal(str, name="newText")
 
     def __init__(self, gui):
         QThread.__init__(self)
         self.gui = gui
         self.updateSignal.connect(self.gui.update)
+        self.textSignal.connect(self.gui.setDisplayText)
+
+        self.nStages = 4    # Number of times the scraper will signal an update
+        self.percentage = 100//self.nStages # Defines increment required to reach next stage
+
+        # Should have nStages elements
+        self.labels = ["Fetching random page...", "Fetching random image...",
+                       "Opening image...", "Downloading image..."]
+
+        self.nextStep = self.percentage  # goes through 25, 50, 75, 100 (in the case of nStages = 4)
 
     def run(self):
-        self.updateSignal.emit(0)
-        time.sleep(0.1)
+        self.nextStep = self.percentage
 
         while (self.gui.progressBar.value() < 100):
             self.updateSignal.emit( self.getNextValue() )
+            self.textSignal.emit( self.getStatus() )
             time.sleep(0.5)
+
+        self.updateSignal.emit(0)
         return
 
     def getNextValue(self):
         current = self.gui.progressBar.value()
         # return current + 1
-        nextThird = (current//33 + 1)*33
+        self.nextStep = (current//self.percentage + 1)*self.percentage
 
-        return (nextThird + current)//2
+        return (self.nextStep + current)//2
+
+    def getStatus(self):
+        return self.labels[ self.nextStep//self.percentage - 1 ]
 
 
 def main():

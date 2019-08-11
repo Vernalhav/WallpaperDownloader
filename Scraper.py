@@ -84,7 +84,7 @@ class Scraper(QThread):
             self.showMessage("Error loading page")
             return
 
-        self.updateSignal.emit(33)
+        self.updateSignal.emit(25)
 
         maxPages = self.getMaxPages(response)
         randomPage = random.randint(1, maxPages)
@@ -95,10 +95,12 @@ class Scraper(QThread):
             self.showMessage("Error loading page")
             return
 
-        self.updateSignal.emit(66)
+        self.updateSignal.emit(50)
 
         imageUrl = self.getRandomImageURL(response)
         imageName = re.sub(r".*/", "", imageUrl)   # removes the rest of the url
+
+        self.updateSignal.emit(75)
 
         with open(os.path.join(self.TempFolderName, imageName), "wb") as f:
             f.write(get(imageUrl).content)
